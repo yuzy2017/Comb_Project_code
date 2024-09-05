@@ -10,6 +10,7 @@ def calculate_optical_parameters(lambda_s, lambda_i, lambda_pump_vis, lambda_pum
     lambda_pump_vis = lambda_pump_vis * 1e-9
     chi2 = chi2 * 1e-12  # Convert pm/V to m/V and then convert to chi2_eff
     FSR = FSR * 1e9  # Convert GHz to Hz
+    overlap = overlap * 1e6  # convert 1/um to 1/m
 
     # Calculate angular frequencies
     omega_s = 2 * pi * c_const / lambda_s
@@ -18,17 +19,16 @@ def calculate_optical_parameters(lambda_s, lambda_i, lambda_pump_vis, lambda_pum
 
     # Calculate the resonator length
     L_res = c_const / (neff * FSR)
-    Fi = Qi/2*lambda_i/(2*pi*neff*L_res)
-    Fs = Qs/2 * lambda_s/(2*pi*neff*L_res)
-    Fp = Qp * lambda_pump_ir /(2*pi*neff*L_res)
+    # Fi = Qi / 2 * lambda_i / (2 * pi * neff * L_res)
+    # Fs = Qs / 2 * lambda_s / (2 * pi * neff * L_res)
+    # Fp = Qp * lambda_pump_ir / (2 * pi * neff * L_res)
     # Calculate 'g'
-    g = (hbar * omega_s * omega_i * omega_p * chi2**2 * overlap**2) / (16 * epsilon_0 * L_res * neff**6)*Fi**2*Fs**2*Fp**4*(neff**2-1)**2*1e7
-    #g = (2*pi*1e6)**2
+    g = 9 * chi2 ** 2 / 32 * overlap ** 2 * omega_s * omega_i / neff ** 4 * hbar * omega_p / (epsilon_0 * neff ** 2 * L_res)
+    # g = (2*pi*1e6)**2
     # Calculate threshold powers
-    P_th_spdc = (hbar * omega_s * omega_i * omega_p**2) / (64 * g) * (Qp1 / (Qs * Qi * Qp))
-    #Efficiency_SHG = (4 * g * Qi * Qs * Qp1) / (hbar * omega_s**2 * omega_i**2)
-    Efficiency_SHG = 0.1
-    P_th_cas = P_th_spdc / Efficiency_SHG
+    P_th_spdc = (hbar * omega_s * omega_i * omega_p ** 2) / (64 * g) * (Qp1 / (Qs * Qi * Qp))
+    Efficiency_SHG = (4 * g * Qi * Qs * Qp1) / (hbar * omega_s ** 2 * omega_i ** 2)# this equation from On-chi chi2 microring optical parametric oscillation
+    P_th_cas =np.sqrt( P_th_spdc / Efficiency_SHG)
     P_th_kerr = (1.54 * pi / 2 * neff**2 * Aeff_m2 * L_res) / (n2 * lambda_pump_ir * Qp**2) * (Qp1 / (2 * Qp))
 
     return g, Efficiency_SHG, P_th_cas, P_th_kerr
@@ -42,7 +42,7 @@ def main():
     chi2 = 20
     neff = 2.0
     FSR = 50
-    overlap = 0.9
+    overlap = 0.74
     n2 = 2.54e-17
     Aeff = 1
     Qp = 2e5
