@@ -23,10 +23,10 @@ def calculate_optical_parameters(lambda_s, lambda_i, lambda_pump_vis, lambda_pum
     # Fs = Qs / 2 * lambda_s / (2 * pi * neff * L_res)
     # Fp = Qp * lambda_pump_ir / (2 * pi * neff * L_res)
     # Calculate 'g'
-    g = 9 * chi2 ** 2 / 32 * overlap ** 2 * omega_s * omega_i / neff ** 4 * hbar * omega_p / (epsilon_0 * neff ** 2 * L_res)
-    # g = (2*pi*1e6)**2
+    #g = 9 * chi2 ** 2 / 32 * overlap ** 2 * omega_s * omega_i / neff ** 4 * hbar * omega_p / (epsilon_0 * neff ** 2 * L_res)
+    g = (2*pi*1.2e6)**2
     # Calculate threshold powers
-    P_th_spdc = (hbar * omega_s * omega_i * omega_p ** 2) / (64 * g) * (Qp1 / (Qs * Qi * Qp))
+    P_th_spdc = (hbar * omega_s * omega_i * omega_p ** 2) / (64 * g) * (Qp1 / (Qs * Qi * Qp**2))
     Efficiency_SHG = (4 * g * Qi * Qs * Qp1) / (hbar * omega_s ** 2 * omega_i ** 2)# this equation from On-chi chi2 microring optical parametric oscillation
     P_th_cas =np.sqrt( P_th_spdc / Efficiency_SHG)
     P_th_kerr = (1.54 * pi / 2 * neff**2 * Aeff_m2 * L_res) / (n2 * lambda_pump_ir * Qp**2) * (Qp1 / (2 * Qp))
@@ -42,13 +42,13 @@ def main():
     chi2 = 20
     neff = 2.0
     FSR = 50
-    overlap = 0.74
+    overlap = 0.74/0.75
     n2 = 2.54e-17
     Aeff = 1
-    Qp = 2e5
-    Qp1 = 4e5
-    Qs = 1e6
-    Qi = 1e6
+    Qp = 3.7e5
+    Qp1 = 1e6
+    Qs = 2.9e5
+    Qi = 2.2e5
 
     # Calculate results
     g, Efficiency_SHG, P_th_cas, P_th_kerr = calculate_optical_parameters(

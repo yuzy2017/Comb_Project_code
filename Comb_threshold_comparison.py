@@ -75,7 +75,7 @@ if st.button('Calculate'):
                 epsilon_0 * neff ** 2 * L_res)
     # g = (2*pi*1e6)**2
     # Calculate threshold powers
-    P_th_spdc = (hbar * omega_s * omega_i * omega_p ** 2) / (64 * g) * (Qp1 / (Qs * Qi * Qp))
+    P_th_spdc = (hbar * omega_s * omega_i * omega_p ** 2) / (64 * g) * (Qp1 / (Qs * Qi * Qp**2))
     Efficiency_SHG = (4 * g * Qi * Qs * Qp1) / (
                 hbar * omega_s ** 2 * omega_i ** 2)  # this equation from On-chi chi2 microring optical parametric oscillation
     P_th_cas = np.sqrt(P_th_spdc / Efficiency_SHG)
@@ -84,18 +84,21 @@ if st.button('Calculate'):
     # Display the results using st.latex for LaTeX formatting
     st.latex(rf"\chi^{{(2)}} \text{{ interaction coefficient }} g = {g:.4e}")
     st.latex(rf"\text{{SHG efficiency }} \eta = {Efficiency_SHG:.4e}")
-    st.latex(rf"P_{{\text{{th, cas}}}} = {P_th_cas*1e3:.2f} \, \mathrm{{mW}}")
+    st.latex(rf"P_{{\text{{th, cas}}}} = {P_th_cas*1e6:.2f} \, \mathrm{{uW}}")
     st.latex(rf"P_{{\text{{th, kerr}}}} = {P_th_kerr*1e3:.2f} \, \mathrm{{mW}}")
 
 # Display the equations and meanings of variables using LaTeX
 st.latex(r"""
-g = \frac{9 \chi^{(2)^2} \cdot \text{overlap}^2 \cdot \hbar \omega_s \omega_i \omega_{p,vis}}{16 \varepsilon_0 L_{\text{res}} \cdot n_{\text{eff}}^6}
+g^2 = \frac{9 \chi^{(2)^2} \cdot \text{overlap}^2 \cdot \hbar \omega_s \omega_i \omega_{p,vis}}{16 \varepsilon_0 L_{\text{res}} \cdot n_{\text{eff}}^6}
 """)
 st.latex(r"""
-Efficiency SHG= \frac{P_{\text{SHG}}}{P_{\text{pump}}^2}
+Efficiency-SHG= \frac{P_{\text{SHG}}}{P_{\text{pump}}^2}=\frac{4  g^2  Q_i Q_s  Q_{p,1}} {\hbar  \omega_s^2  \omega_i^2}
 """)
 st.latex(r"""
-P_{\text{th, cas}} = \frac{\hbar \omega_s \omega_i \omega_{p,vis}^2}{64 g} \frac{Q_{p1}}{Q_s Q_i Q_p}
+P_{\text{th, spdc}} = \frac{\hbar \omega_s \omega_i \omega_{p,vis}^2}{64 g^2} \frac{Q_{p1}}{Q_s Q_i Q_p^2}
+""")
+st.latex(r"""
+P_{\text{th, cas}} = \sqrt{\frac{P_{\text{th, spdc}}}{Efficiency-SHG}}
 """)
 st.latex(r"""
 P_{\text{th, kerr}} = 1.54 \frac{\pi}{2} \frac{n_{\text{eff}}^2  L_{\text{res}}}{overlap^2 n_2 \lambda_{p,ir} Q_p^2} \frac{Q_{p}}{2 Q_{p1}}
@@ -105,12 +108,12 @@ st.markdown("""
 ### Variable Meanings:
 - $\lambda_s, \lambda_i$: Signal and idler wavelengths  
 - $\lambda_{pump, vis}, \lambda_{pump, ir}$: Pump wavelengths in visible and infrared  
-- $\chi^2$: Second-order nonlinear susceptibility  
+- $\chi^{(2)}$: Second-order nonlinear susceptibility  
 - $n_{eff}$: Effective refractive index  
 - FSR: Distance between neighboring lines in the frequency domain  
-- overlap: Overlap integral of the modes ,notice $V_{eff}={L_res}{overlap^2} $
+- overlap: Overlap integral of the modes ,notice $V_{eff}={L_res}/{overlap^2} $
 - $n_2$: Nonlinear refractive index  
 - $A_{eff}$: Effective mode area, dummy here replaced by $1/overlap^2 $
 - $Q_p, Q_s, Q_i$: Loaded quality factors of the pump, signal, and idler modes
-- $Q_{p1}$: Intrinsic quality factor of the pump mode  
+- $Q_{p1}$: Coupling quality factor of the pump mode  
 """)
