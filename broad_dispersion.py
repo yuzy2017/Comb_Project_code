@@ -111,24 +111,25 @@ neff_TE = np.concatenate([neff_3[0:11], neff_4[11:78], neff_3[78:]])
 beta_TE = neff_TE * omega / c_const
 
 # Calculate the first derivative of beta_TE w.r.t. omega
-d_beta_domega = np.gradient(beta_TE, omega)
-
+#d_beta_domega = np.gradient(beta_TE, omega)
+d_n_dlambda = np.gradient(neff_TE, wavelength)
 # Calculate the second derivative (beta_2) of beta_TE w.r.t. omega
-beta_2_from_neff_TE = np.gradient(d_beta_domega, omega)
-
+#beta_2_from_neff_TE = np.gradient(d_beta_domega, omega)
+d_n_2_dlambda = np.gradient(d_n_dlambda, wavelength)
 ### Plotting beta_2 from the selected neff_TE ###
 
 plt.figure(figsize=(10, 6))
 
 # Plot beta_2 from neff_TE
-plt.plot(frequency * 1e-12, beta_2_from_neff_TE * 1e27, label='Beta_2 (from selected neff_TE)', color='green', linestyle='-', linewidth=2)
+plt.plot(wavelength * 1e9,-d_n_2_dlambda*wavelength/c_const * 1e6, label='D(GVD) (from selected neff_TE)', color='green', linestyle='-', linewidth=2)
 
 # Add a reference line at Beta_2 = 0
 plt.axhline(y=0, color='black', linestyle='--', linewidth=1, label='Reference Line (Beta_2 = 0)')
 
 # Add labels and title
-plt.xlabel('Frequency (THz)', fontsize=14)
-plt.ylabel('Beta_2 (ps^2/km)', fontsize=14)
+plt.xlabel('Wavelength (nm)', fontsize=14)
+#plt.ylabel('Beta_2 (ps^2/km)', fontsize=14)
+plt.ylabel('GVD (ps/nm/km)',fontsize= 14)
 plt.title('Beta_2 from selected neff_TE across Frequencies', fontsize=16, fontweight='bold')
 
 # Add a legend to distinguish the curve and the reference line
@@ -143,3 +144,59 @@ plt.show()
 
 # Save the plot as an image (optional)
 plt.savefig('beta_2_from_neff_TE.png', dpi=300)
+
+
+# Load the data from the text file
+file_path = 'E:/Sim_Code/LNbO3_sampled_ne_no_no.txt'
+data = pd.read_csv(file_path, sep='\t', header=None)
+
+# Convert the range from microns to nanometers for consistency with the dataset
+wavelength_min = 700  # 0.7 µm in nm
+wavelength_max = 1700  # 1.7 µm in nm
+
+# Filter the dataset based on the wavelength range
+data_filtered = data[(data[0] >= wavelength_min) & (data[0] <= wavelength_max)]
+
+# Extract relevant columns: wavelength (column 0) and refractive indices (ne - column 1)
+wavelength1 = data_filtered[0].values  # Wavelength (column 0)
+n_e1 = data_filtered[1].values  # Extraordinary refractive index (ne - column 1)
+
+# Fit a 24th order polynomial to the ne data
+poly_coeffs = np.polyfit(wavelength1, n_e1, 24)
+
+# Generate the fitted refractive index values using the polynomial
+poly_fit_ne = np.polyval(poly_coeffs, wavelength*1e9)
+
+
+# Calculate first and second derivatives of the refractive index with respect to wavelength
+dn_dlambda = np.gradient(poly_fit_ne, wavelength)  # First derivative
+d2n_dlambda2 = np.gradient(dn_dlambda, wavelength)  # Second derivative
+
+# Calculate GVD using the formula
+GVD = -(wavelength / (c_const)) * d2n_dlambda2*1e6
+
+plt.figure(figsize=(10, 6))
+
+# Plot beta_2 from neff_TE
+plt.plot(wavelength * 1e9,-d_n_2_dlambda*wavelength/c_const * 1e6, label='D(GVD) (from selected neff_TE)', color='green', linestyle='-', linewidth=2)
+plt.plot(wavelength * 1e9,GVD, label='D(GVD) (from material)', color='blue', linestyle='-', linewidth=2)
+plt.plot(wavelength * 1e9,-GVD-d_n_2_dlambda*wavelength/c_const * 1e6, label='Waveguide Dispersion', color='red', linestyle='-', linewidth=2)
+# Add a reference line at Beta_2 = 0
+plt.axhline(y=0, color='black', linestyle='--', linewidth=1, label='Reference Line (Beta_2 = 0)')
+#plt.xlim([1000,1700])
+plt.ylim([-1000,1000])
+# Add labels and title
+plt.xlabel('Wavelength (nm)', fontsize=14)
+#plt.ylabel('Beta_2 (ps^2/km)', fontsize=14)
+plt.ylabel('GVD (ps/nm/km)',fontsize= 14)
+plt.title('Beta_2 from selected neff_TE across Frequencies', fontsize=16, fontweight='bold')
+
+# Add a legend to distinguish the curve and the reference line
+plt.legend(fontsize=12)
+
+# Add grid for better readability
+plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+
+# Show the plot
+plt.tight_layout()
+plt.show()
