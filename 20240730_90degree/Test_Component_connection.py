@@ -106,9 +106,10 @@ gap_vis =gap
 pulley_angle = 29
 
 A = Device("single")
-Ring_point_couple = A << sw.ring_resonator(width=W_ring,R_ring=R_ring,gap_s=gap_ir,gap_e=6,layer=layer_ring)
-                                                #=gap_ir,gap_e=6, layer=layer_ring)
-
+# Ring_point_couple = A << sw.ring_resonator(width=W_ring,R_ring=R_ring,gap_s=gap_ir,gap_e=6,layer=layer_ring)
+#                                                 #=gap_ir,gap_e=6, layer=layer_ring)
+#Ring_point_couple = A << sw.ring_coupling_symmetric(w_ring=W_ring,w_bus=W_bus_1550,R= R_ring,g=gap_ir,layer=layer_ring)
+Ring_point_couple = A << sw.ring_coupling_pulley_taper(w_ring=W_ring,w_bus=W_bus_1550,w_thin=0.3,R=R_ring,g=gap_vis,layer=layer_ring)
 qp(A)
 
 A.write_gds(filename=name+'.gds',precision=1e-10)

@@ -1093,45 +1093,14 @@ def ring_resonator(width=1, R_ring=100, gap_s=0.3, gap_e=6, layer=1):
 
 def ring_coupling_pulley(w_ring=2, w_bus=0.6, R=150, g=1, angle=10, layer=6):
     D = Device()
+    l_wg = np.max((R*(1-2*sin(angle/180*pi)),5))
     RING = pg.ring(radius=R, width=w_ring, angle_resolution=0.1, layer=layer)
     ARC_WHOLE = arc(width1=w_bus, width2=w_bus, angle1=0,
                angle2=2*angle, R0=R+w_ring/2+w_bus/2+g, layer=layer).rotate(-angle,center=(0,R+w_ring/2+w_bus/2+g))
     ARC1A = arc(width1=w_bus, width2=w_bus, angle1=0,
                 angle2=angle, R0=R+w_ring/2+w_bus/2+g, layer=layer)
-    WG1 = wg(width1=w_bus, width2=w_bus, length=R, layer=layer)
-    ARC2A = arc(width1=w_bus, width2=w_bus, angle1=0,
-                angle2=angle, R0=R+w_ring/2+w_bus/2+g, layer=layer)
-    WG2 = wg(width1=w_bus, width2=w_bus, length=R, layer=layer)
-
-    ring = D << RING
-    arc_whole = D<< ARC_WHOLE
-    arc1a = D << ARC1A
-    wg1 = D << WG1
-    arc2a = D << ARC2A
-    wg2 = D << WG2
-
-    arc_whole.movey(-R-g-w_ring/2-w_bus/2)
-    arc1a.connect(port=2, destination=arc_whole.ports[2])
-    wg1.connect(port=1, destination=arc1a.ports[1])
-
-    arc2a.connect(port=1, destination=arc_whole.ports[1])
-    wg2.connect(port=1, destination=arc2a.ports[2])
-
-    port1 = D.add_port(1, wg1.ports[2].midpoint, w_bus, 0)
-    port2 = D.add_port(2, wg2.ports[2].midpoint, w_bus, 180)
-
-    return D
-def ring_coupling_pulley_zy(w_ring=2, w_bus=0.6, R=150, g=1, angle=10, layer=6):
-    #this version I shorten the length of the straight waveguide
-    D = Device()
-    RING = pg.ring(radius=R, width=w_ring, angle_resolution=0.1, layer=layer)
-    ARC_WHOLE = arc_zy(width1=w_bus, width2=w_bus, angle1=0,
-               angle2=2*angle, R0=R+w_ring/2+w_bus/2+g, layer=layer).rotate(-angle,center=(0,R+w_ring/2+w_bus/2+g))
-    ARC1A = arc_zy(width1=w_bus, width2=w_bus, angle1=0,
-                angle2=angle, R0=R+w_ring/2+w_bus/2+g, layer=layer)
-    l_wg = max(5,R-2*R*sin(angle/180*pi))
     WG1 = wg(width1=w_bus, width2=w_bus, length=l_wg, layer=layer)
-    ARC2A = arc_zy(width1=w_bus, width2=w_bus, angle1=0,
+    ARC2A = arc(width1=w_bus, width2=w_bus, angle1=0,
                 angle2=angle, R0=R+w_ring/2+w_bus/2+g, layer=layer)
     WG2 = wg(width1=w_bus, width2=w_bus, length=l_wg, layer=layer)
 
@@ -1148,8 +1117,42 @@ def ring_coupling_pulley_zy(w_ring=2, w_bus=0.6, R=150, g=1, angle=10, layer=6):
 
     arc2a.connect(port=1, destination=arc_whole.ports[1])
     wg2.connect(port=1, destination=arc2a.ports[2])
-    # xdiff = arc2a.ports[2].midpoint-wg2.ports[1].midpoint
-    # wg2.move(xdiff)
+
+    port1 = D.add_port(1, wg1.ports[2].midpoint, w_bus, 0)
+    port2 = D.add_port(2, wg2.ports[2].midpoint, w_bus, 180)
+
+    return D
+def ring_coupling_pulley_taper(w_ring=2, w_bus=0.7,w_thin=0.3, R=150, g=1, angle=10, layer=6):
+    #this version I shorten the length of the straight waveguide
+    D = Device()
+    l_wg = np.max((R * (1 - 2*sin(angle / 180 * pi)), 5))
+    RING = pg.ring(radius=R, width=w_ring, angle_resolution=0.1, layer=layer)
+    ARC1 = arc(width1=w_thin, width2=w_bus, angle1=0,
+               angle2=angle, R0=R + w_ring / 2 + w_bus / 2 + g, layer=layer)
+    ARC1A = arc(width1=w_bus, width2=w_bus, angle1=0,
+                angle2=angle, R0=R + w_ring / 2 + w_bus / 2 + g, layer=layer)
+    WG1 = wg(width1=w_bus, width2=w_bus, length=l_wg, layer=layer)
+    ARC2 = arc(width1=w_bus, width2=w_thin, angle1=0,
+               angle2=angle, R0=R + w_ring / 2 + w_bus / 2 + g, layer=layer)
+    ARC2A = arc(width1=w_bus, width2=w_bus, angle1=0,
+                angle2=angle, R0=R + w_ring / 2 + w_bus / 2 + g, layer=layer)
+    WG2 = wg(width1=w_bus, width2=w_bus, length=l_wg, layer=layer)
+
+    ring = D << RING
+    arc1 = D << ARC1
+    arc1a = D << ARC1A
+    wg1 = D << WG1
+    arc2 = D << ARC2
+    arc2a = D << ARC2A
+    wg2 = D << WG2
+
+    arc1.movey(-R - g - w_ring / 2 - w_bus / 2)
+    arc1a.connect(port=2, destination=arc1.ports[2])
+    wg1.connect(port=1, destination=arc1a.ports[1])
+
+    arc2.connect(port=2, destination=arc1.ports[1])
+    arc2a.connect(port=1, destination=arc2.ports[1])
+    wg2.connect(port=1, destination=arc2a.ports[2])
 
     port1 = D.add_port(1, wg1.ports[2].midpoint, w_bus, 0)
     port2 = D.add_port(2, wg2.ports[2].midpoint, w_bus, 180)
@@ -1159,16 +1162,16 @@ def ring_coupling_symmetric(w_ring=2, w_bus=0.8, R=150, g=1, layer=6):
     # is this the tapered pulley coupler?
     D = Device()
     RING = pg.ring(radius=R, width=w_ring, angle_resolution=0.1, layer=layer)
-    ARC1 = arc(width1=w_ring, width2=w_ring, angle1=0,
+    ARC1 = arc(width1=w_bus, width2=w_bus, angle1=0,
                angle2=15, R0=R+w_ring/2+w_bus/2+g, layer=layer)
-    ARC1A = arc(width1=w_ring, width2=w_ring, angle1=0,
+    ARC1A = arc(width1=w_bus, width2=w_bus, angle1=0,
                 angle2=15, R0=R+w_ring/2+w_bus/2+g, layer=layer)
-    WG1 = wg(width1=w_ring, width2=w_bus, length=R, layer=layer)
-    ARC2 = arc(width1=w_ring, width2=w_ring, angle1=0,
+    WG1 = wg(width1=w_bus, width2=w_bus, length=R, layer=layer)
+    ARC2 = arc(width1=w_bus, width2=w_bus, angle1=0,
                angle2=15, R0=R+w_ring/2+w_bus/2+g, layer=layer)
-    ARC2A = arc(width1=w_ring, width2=w_ring, angle1=0,
+    ARC2A = arc(width1=w_bus, width2=w_bus, angle1=0,
                 angle2=15, R0=R+w_ring/2+w_bus/2+g, layer=layer)
-    WG2 = wg(width1=w_ring, width2=w_bus, length=R, layer=layer)
+    WG2 = wg(width1=w_bus, width2=w_bus, length=R, layer=layer)
 
     ring = D << RING
     arc1 = D << ARC1
@@ -1198,6 +1201,7 @@ def ring_coupling_point(width=1,w_bus=0.8, R_ring=100,R_couple=100, gap_s=0.3, g
 
         arc_gap2 = np.arccos(((R_couple + w_bus / 2) - (gap_e - gap_s) / 2) / (R_couple + w_bus / 2))
         degrees_arc_gap2 = np.degrees(arc_gap2)
+        R_couple = R_couple +width/2+w_bus/2+gap_s
         arc_coupling = arc(width1=w_bus, width2=w_bus, angle1=-degrees_arc_gap2, angle2=degrees_arc_gap2, R0=R_couple,
                            layer=layer)
         arc_coupling.rotate(-degrees_arc_gap2, center=(0, R_couple))
@@ -1237,6 +1241,8 @@ def ring_coupling_point(width=1,w_bus=0.8, R_ring=100,R_couple=100, gap_s=0.3, g
         # E_coupling_right2 = D << euler_bend_right2.mirror((0, 0), (1, 0))
 
         a_coupling_left.connect(port=2, destination=a_coupling.ports[1])
+       # print(a_coupling.ports)
+
         a_coupling_right.connect(port=1, destination=a_coupling.ports[2])
         a_coupling_left1.connect(port=2, destination=a_coupling_left.ports[1])
         a_coupling_right1.connect(port=1, destination=a_coupling_right.ports[2])

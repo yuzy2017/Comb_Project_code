@@ -64,13 +64,13 @@ DIE = pg.basic_die(size=(40000, 40000), street_width=100, street_length=300,
 
 # global ebeam mark
 mark_offset = 5000
-DIE.add_ref(sw.alignment_mark_array(width=2, length=300, center_square=False,
-                                    offset=[(-200, 200), (-200, -200),
-                                            (200, -200), (200, 200)],
-                                    coordinates=[(-mark_offset, 26000), (-mark_offset, -20000),
-                                                 (mark_offset+4000, -20000), (mark_offset+4000, 26000)],
-                                    layer=layer_ebeam_mark, double_marks=False))
-qp(DIE)
+# #DIE.add_ref(sw.alignment_mark_array(width=2, length=300, center_square=False,
+#                                     offset=[(-200, 200), (-200, -200),
+#                                             (200, -200), (200, 200)],
+#                                     coordinates=[(-mark_offset, 26000), (-mark_offset, -20000),
+#                                                  (mark_offset+4000, -20000), (mark_offset+4000, 26000)],
+#                                     layer=layer_ebeam_mark, double_marks=False))
+# qp(DIE)
 
 
 
@@ -84,8 +84,9 @@ Theta_c = 10
 Gap_start = 0.4
 Gap_end = 1.2
 W_ring = 2.5
-W_bus_1550 = 0.9
+W_bus_1550 = 2
 W_bus_780 = 0.7
+W_bus_780_taper = 0.3
 Poling_p = 3.849
 mode_num = round(2*pi*R_ring/Poling_p)
 w_1550_out = 3
@@ -106,37 +107,37 @@ L_ybottom = 3000
 gap_1550 = gap
 gap_780 =gap
 
-def ring_coupler_1550(gap_ir=0.4,colume_idx = 0, total_colum=9):
+def ring_coupler_1550(gap_ir=0.4,w_bus=0.9,R_Couple=200,colume_idx = 0, total_colum=9):
     A = Device("single")
-    Ring_point_couple = A << sw.ring_coupling_point(width=W_ring, w_bus=W_bus_1550, R_ring=R_ring, R_couple=R_couple,
-                                                    gap_s=gap_ir, gap_e=6, layer=layer_ring).rotate(90)
+    Ring_point_couple = A << sw.ring_coupling_point(width=W_ring, w_bus=w_bus, R_ring=R_ring, R_couple=R_Couple,
+                                                      gap_s=gap_ir, gap_e=6, layer=layer_ring).rotate(90)
 
-    Taper_in = A << sw.sbend_taper(w1=w_1550_out, w2=W_bus_1550, l=500, layer=layer_ring)
+    Taper_in = A << sw.sbend_taper(w1=w_1550_out, w2=w_bus, l=500, layer=layer_ring)
     Taper_in.move((-600, -600))
-    Route_in = A << pr.route_smooth(Ring_point_couple.ports[1], Taper_in.ports[2], width=W_bus_1550, radius=R_out,
+    Route_in = A << pr.route_smooth(Ring_point_couple.ports[1], Taper_in.ports[2], width=w_bus, radius=R_out,
                                     layer=layer_ring)
-    Taper_out = A << sw.sbend_taper(w1=W_bus_1550, w2=w_1550_out, l=500, layer=layer_ring)
+    Taper_out = A << sw.sbend_taper(w1=w_bus, w2=w_1550_out, l=500, layer=layer_ring)
     # Taper_out.connect(1,destination=Ring_point_couple.ports[2])
     Taper_out.move((600, 600))
 
-    Route_out = A << pr.route_smooth(Ring_point_couple.ports[2], Taper_out.ports[1], width=W_bus_1550, radius=R_out,
+    Route_out = A << pr.route_smooth(Ring_point_couple.ports[2], Taper_out.ports[1], width=w_bus, radius=R_out,
                                      layer=layer_ring)
-    ydiff = abs(Ring_point_couple.ports[2].midpoint[1] - Route_out.ymin)
-    xdiff = abs(Ring_point_couple.ports[2].midpoint[0] - W_bus_1550 / 2 - Route_out.xmin)
-    Route_out.move((-xdiff, -ydiff))
+    #ydiff = abs(Ring_point_couple.ports[2].midpoint[1] - Route_out.ymin)
+    #xdiff = abs(Ring_point_couple.ports[2].midpoint[0] - W_bus_1550 / 2 - Route_out.xmin)
+    #Route_out.move((-xdiff, -ydiff))
     # Ring_point_couple = A<< sw.ring_resonator(width=1, R_ring=200, gap_s=0.3, gap_e=6, layer=6)
 
-    WG_1550_in = A << sw.wg(width1=w_1550_out, width2=w_1550_out, length=2500 + colume_idx * detaX, layer=layer_ring)
+    WG_1550_in = A << sw.wg(width1=w_1550_out, width2=w_1550_out, length=4000 + colume_idx * detaX, layer=layer_ring)
     WG_1550_in.connect(2, destination=Taper_in.ports[1])
-    WG_1550_out = A << sw.wg(width1=w_1550_out, width2=w_1550_out, length=2500 + (total_colum - colume_idx) * detaX,
+    WG_1550_out = A << sw.wg(width1=w_1550_out, width2=w_1550_out, length=4000 + (total_colum - colume_idx) * detaX,
                              layer=layer_ring)
     WG_1550_out.connect(1, destination=Taper_out.ports[2])
     # %%
     # label #as we are going to sweep the width we try also sweep the gap here
     txt = ('R_ring {:.2f}\n'.format(R_ring) +
-           'R_couple_ir {:.3f}\n'.format(R_couple) +
+           'R_couple_ir {:.3f}\n'.format(R_Couple) +
            'W_ring {:.3f}\n'.format(W_ring) +
-           'W_bus_ir {:.3f}\n'.format(W_bus_1550) +
+           'W_bus_ir {:.3f}\n'.format(w_bus) +
            'g_ir {:.2f}\n'.format(gap_ir) )
 
     LABEL1 = pg.text(text=txt, size=20, justify='center',
@@ -145,11 +146,50 @@ def ring_coupler_1550(gap_ir=0.4,colume_idx = 0, total_colum=9):
 
     return A
 
-def ring_coupler_780(gap_vis=0.4,pulley_angle=29,colume_idx = 0, total_colum=9):
+def ring_coupler_780(gap_vis=0.4,w_bus = 0.7,pulley_angle=30,colume_idx = 0, total_colum=9):
     A = Device("single")
 
-    Pulley_coupler = A << sw.ring_coupling_pulley_zy(w_ring=W_ring, w_bus=W_bus_780, R=R_ring, g=gap_vis, angle=pulley_angle/2,
+    Pulley_coupler = A << sw.ring_coupling_pulley(w_ring=W_ring, w_bus=w_bus, R=R_ring, g=gap_vis, angle=pulley_angle/2,
                                                      layer=layer_ring)
+    Pulley_coupler.rotate(90)
+
+    Taper_in = A << sw.sbend_taper(w1=w_780_out, w2=w_bus, l=500, layer=layer_ring)
+    Taper_in.move((-630, -600))
+    Route_in = A << pr.route_smooth(Pulley_coupler.ports[2], Taper_in.ports[2], width=w_bus, radius=R_out,
+                                    layer=layer_ring)
+    Taper_out = A << sw.sbend_taper(w1=w_bus, w2=w_780_out, l=500, layer=layer_ring)
+    # Taper_out.connect(1,destination=Ring_point_couple.ports[2])
+    Taper_out.move((600, 600))
+    Route_out = A << pr.route_smooth(Pulley_coupler.ports[1], Taper_out.ports[1], width=w_bus, radius=R_out,
+                                     layer=layer_ring)
+    #ydiff = abs(Pulley_coupler.ports[1].midpoint[1] - Route_out.ymin)
+    #xdiff = abs(Pulley_coupler.ports[1].midpoint[0] - W_bus_780 / 2 - Route_out.xmin)
+   #Route_out.move((-xdiff, -ydiff))
+
+    A.write_gds(filename=name + '.gds', precision=1e-10)
+    # Ring_point_couple = A<< sw.ring_resonator(width=1, R_ring=200, gap_s=0.3, gap_e=6, layer=6)
+
+    WG_780_in = A << sw.wg(width1=w_780_out, width2=w_780_out, length=4000 + colume_idx * detaX, layer=layer_ring)
+    WG_780_in.connect(2, destination=Taper_in.ports[1])
+    WG_780_out = A << sw.wg(width1=w_780_out, width2=w_780_out, length=4000 + (total_colum - colume_idx) * detaX,
+                            layer=layer_ring)
+    WG_780_out.connect(1, destination=Taper_out.ports[2])
+    # %%
+    # label #as we are going to sweep the width we try also sweep the gap here
+    txt = ('R_ring {:.2f}\n'.format(R_ring) +
+           'W_ring {:.3f}\n'.format(W_ring) +
+           'W_bus_vis {:.3f}\n'.format(w_bus) +
+           'g_vis {:.2f}\n'.format(gap_vis))
+
+    LABEL1 = pg.text(text=txt, size=20, justify='center',
+                     layer=layer_text, font='DEPLOF')
+    label1 = A << LABEL1
+
+    return  A
+def ring_coupler_780_taper(gap_vis=0.4,pulley_angle=30,colume_idx = 0, total_colum=9):
+    A = Device("single")
+
+    Pulley_coupler = A << sw.ring_coupling_pulley_taper(w_ring=W_ring,w_bus=W_bus_780,w_thin=W_bus_780_taper,R=R_ring,g=gap_vis,angle=pulley_angle/2,layer=layer_ring)
     Pulley_coupler.rotate(90)
 
     Taper_in = A << sw.sbend_taper(w1=w_780_out, w2=W_bus_780, l=500, layer=layer_ring)
@@ -168,9 +208,9 @@ def ring_coupler_780(gap_vis=0.4,pulley_angle=29,colume_idx = 0, total_colum=9):
     A.write_gds(filename=name + '.gds', precision=1e-10)
     # Ring_point_couple = A<< sw.ring_resonator(width=1, R_ring=200, gap_s=0.3, gap_e=6, layer=6)
 
-    WG_780_in = A << sw.wg(width1=w_780_out, width2=w_780_out, length=2500 + colume_idx * detaX, layer=layer_ring)
+    WG_780_in = A << sw.wg(width1=w_780_out, width2=w_780_out, length=4000 + colume_idx * detaX, layer=layer_ring)
     WG_780_in.connect(2, destination=Taper_in.ports[1])
-    WG_780_out = A << sw.wg(width1=w_780_out, width2=w_780_out, length=2500 + (total_colum - colume_idx) * detaX,
+    WG_780_out = A << sw.wg(width1=w_780_out, width2=w_780_out, length=4000 + (total_colum - colume_idx) * detaX,
                             layer=layer_ring)
     WG_780_out.connect(1, destination=Taper_out.ports[2])
     # %%
@@ -187,15 +227,17 @@ def ring_coupler_780(gap_vis=0.4,pulley_angle=29,colume_idx = 0, total_colum=9):
     return  A
 
 
-def single_device(gap_ir=0.4,gap_vis=0.4,pulley_angle=29,colume_idx = 0, total_colum=9,extra_move = 50):
+def single_device(w_bus_ir =W_bus_1550,R_Couple = R_couple,gap_ir=0.4,gap_vis=0.4,pulley_angle=30,colume_idx = 0, total_colum=9,extra_move = 50,taper_key = False):
     A = Device("single")
-    Ring_point_couple = A << sw.ring_coupling_point(width=W_ring, w_bus=W_bus_1550, R_ring=R_ring, R_couple=R_couple,
+    Ring_point_couple = A << sw.ring_coupling_point(width=W_ring, w_bus=w_bus_ir, R_ring=R_ring, R_couple=R_Couple,
                                                     gap_s=gap_ir, gap_e=6, layer=layer_ring)
 
     # here try to generate the poling fingers
     # Poling_finger = A<<sw.circular_poling_finger(R_ring=R_ring, length=20,circle_pad_width=10, square_pad_width=100,square_pad_rotation = -90, mode_number=mode_num, duty_cycle=0.3, layer=layer_metal)
-
-    Pulley_coupler = A << sw.ring_coupling_pulley_zy(w_ring=W_ring, w_bus=W_bus_780, R=R_ring, g=gap_vis,
+    if taper_key:
+        Pulley_coupler = A<<sw.ring_coupling_pulley_taper(w_ring=W_ring,w_bus=W_bus_780,w_thin=0.3,R=R_ring,g=gap_vis,angle=pulley_angle/2,layer=layer_ring)
+    else:
+        Pulley_coupler = A << sw.ring_coupling_pulley(w_ring=W_ring, w_bus=W_bus_780, R=R_ring, g=gap_vis,
                                                      angle=pulley_angle / 2,
                                                      layer=layer_ring)
     Pulley_coupler.rotate(180)
@@ -205,10 +247,10 @@ def single_device(gap_ir=0.4,gap_vis=0.4,pulley_angle=29,colume_idx = 0, total_c
     A.rotate(-90)
 
     # lastly we add tapers
-    Taper_in_1550 = A << sw.sbend_taper(w1=w_1550_out, w2=W_bus_1550, l=500, layer=layer_ring)
+    Taper_in_1550 = A << sw.sbend_taper(w1=w_1550_out, w2=w_bus_ir, l=500, layer=layer_ring)
     Taper_in_1550.move((-1052, -600))
     # qp(A)
-    Taper_out_1550 = A << sw.sbend_taper(w1=W_bus_1550, w2=w_1550_out, l=500, layer=layer_ring)
+    Taper_out_1550 = A << sw.sbend_taper(w1=w_bus_ir, w2=w_1550_out, l=500, layer=layer_ring)
     Taper_out_1550.move((700, 650))
     # qp(A)
     Taper_out_780 = A << sw.sbend_taper(w1=W_bus_780, w2=w_780_out, l=500, layer=layer_ring)
@@ -218,10 +260,10 @@ def single_device(gap_ir=0.4,gap_vis=0.4,pulley_angle=29,colume_idx = 0, total_c
     Taper_in_780.move((-1052, -600 - D_fiber_array))
 
     # now connect the taper to the coupler with route
-    route_in_1550 = A << pr.route_smooth(Ring_point_couple.ports[2], Taper_in_1550.ports[2], width=W_bus_1550,
+    route_in_1550 = A << pr.route_smooth(Ring_point_couple.ports[2], Taper_in_1550.ports[2], width=w_bus_ir,
                                          radius=R_out,
                                          layer=layer_ring)
-    route_out_1550 = A << pr.route_smooth(Ring_point_couple.ports[1], Taper_out_1550.ports[1], width=W_bus_1550,
+    route_out_1550 = A << pr.route_smooth(Ring_point_couple.ports[1], Taper_out_1550.ports[1], width=w_bus_ir,
                                           radius=R_out,
                                           layer=layer_ring)
     route_in_780 = A << pr.route_smooth(Pulley_coupler.ports[2], Taper_in_780.ports[2], width=W_bus_780, radius=R_out,
@@ -231,15 +273,16 @@ def single_device(gap_ir=0.4,gap_vis=0.4,pulley_angle=29,colume_idx = 0, total_c
 
     # qp(A)
     # here we also need to give the input output waveguide
-    WG_1550_in = A << sw.wg(width1=w_1550_out, width2=w_1550_out, length=2005 + colume_idx * (detaX+extra_move), layer=layer_ring)
+    WG_1550_in = A << sw.wg(width1=w_1550_out, width2=w_1550_out, length=3505 + colume_idx * (detaX+extra_move), layer=layer_ring)
     WG_1550_in.connect(2, destination=Taper_in_1550.ports[1])
-    WG_780_in = A << sw.wg(width1=w_780_out, width2=w_780_out, length=2005 + colume_idx * (detaX+extra_move), layer=layer_ring)
+    WG_780_in = A << sw.wg(width1=w_780_out, width2=w_780_out, length=3505 + colume_idx * (detaX+extra_move), layer=layer_ring)
     WG_780_in.connect(2, destination=Taper_in_780.ports[1])
     # qp(A)
-    WG_1550_out = A << sw.wg(width1=w_1550_out, width2=w_1550_out, length=2500 + (total_colum - colume_idx) * (detaX+extra_move)-total_colum*extra_move,
+    # here +2000 just for good looking
+    WG_1550_out = A << sw.wg(width1=w_1550_out, width2=w_1550_out, length=4000+2000 + (total_colum - colume_idx) * (detaX+extra_move)-total_colum*extra_move,
                              layer=layer_ring)
     WG_1550_out.connect(1, destination=Taper_out_1550.ports[2])
-    WG_780_out = A << sw.wg(width1=w_780_out, width2=w_780_out, length=2500 + (total_colum - colume_idx) * (detaX+extra_move)-total_colum*extra_move,
+    WG_780_out = A << sw.wg(width1=w_780_out, width2=w_780_out, length=4000+2000 + (total_colum - colume_idx) * (detaX+extra_move)-total_colum*extra_move,
                             layer=layer_ring)
     WG_780_out.connect(1, destination=Taper_out_780.ports[2])
     if (colume_idx == 0) | (colume_idx == 8):
@@ -252,9 +295,9 @@ def single_device(gap_ir=0.4,gap_vis=0.4,pulley_angle=29,colume_idx = 0, total_c
     # %%
     # label #as we are going to sweep the width we try also sweep the gap here
     txt = ('R_ring {:.2f}\n'.format(R_ring) +
-       'R_couple_ir {:.3f}\n'.format(R_couple) +
+       'R_couple_ir {:.3f}\n'.format(R_Couple) +
        'W_ring {:.3f}\n'.format(W_ring) +
-       'W_bus_ir {:.3f}\n'.format(W_bus_1550) +
+       'W_bus_ir {:.3f}\n'.format(w_bus_ir) +
        'W_bus_vis {:.3f}\n'.format(W_bus_780) +
        'g_ir {:.2f}\n'.format(gap_ir) +
        'g_vis {:.2f}\n'.format(gap_vis))
@@ -266,33 +309,62 @@ def single_device(gap_ir=0.4,gap_vis=0.4,pulley_angle=29,colume_idx = 0, total_c
     label1.movey(150 + 300)
 
     return A
-gap_780 = np.linspace(0.1,1.2,12)
-gap_1550 = np.linspace(0.1,1.2,12)
-D1 =Device('1550_coupler')
+DD= Device()
+gap_780 = np.linspace(0.2,1.2,6)
+gap_1550 = np.linspace(0.2,1.2,6)
+D1 =Device('1550_coupler_1')
 for i, gap_ir in enumerate(gap_1550):
-    mydev = D1 << ring_coupler_1550(gap_ir,i,len(gap_1550))
+    mydev = D1 << ring_coupler_1550(gap_ir=gap_1550[i],w_bus=0.9,R_Couple=200,colume_idx=i,total_colum=2*len(gap_1550))
     mydev.movex(i * detaX)
     mydev.movey(-i * detaY/2 )
-DIE<<D1
+DD<<D1
+D11 = Device('1550_coupler_2')
+for i, gap_ir in enumerate(gap_1550):
+    mydev = D11<< ring_coupler_1550(gap_ir=gap_1550[i],w_bus=2,R_Couple=50,colume_idx=(len(gap_1550)+i),total_colum=2*len(gap_1550))
+    mydev.movex((len(gap_1550)+i) * detaX)
+    mydev.movey(-(len(gap_1550)+i) * detaY/2 )
+DD <<D11
 
 D2 = Device('780_coupler')
 for i, gap_vis in enumerate(gap_780):
-    mydev = D2 << ring_coupler_780(gap_vis=gap_vis,pulley_angle=29,colume_idx=i,total_colum=len(gap_780))
+    mydev = D2 << ring_coupler_780(gap_vis=gap_780[i],w_bus=0.3,pulley_angle=30,colume_idx=i,total_colum=2*len(gap_780))
     mydev.movex(i * detaX)
     mydev.movey(-i * detaY/2 )
 D2.movey(-3000)
-DIE<<D2
+DD<<D2
+D22 = Device('780_coupler_2')
+for i, gap_vis in enumerate(gap_780):
+    mydev = D22 << ring_coupler_780_taper(gap_vis=gap_780[i],pulley_angle=30,colume_idx=(len(gap_780)+i),total_colum=2*len(gap_780))
+    mydev.movex((len(gap_780)+i) * detaX)
+    mydev.movey(-(len(gap_780)+i) * detaY/2 )
+D22.movey(-3000)
+DD<<D22
 
+gap_780 = np.linspace(0.3,1,8)
+gap_1550 = np.linspace(0.3,1,8)
 D3 = Device('Add_drop_coupler')
 for i, gap_vis in enumerate(gap_780):
-    mydev = D3 << single_device(gap_1550[i],gap_vis,29,i,len(gap_780))
-    mydev.movex(i * (detaX+50))
+    mydev = D3 << single_device(w_bus_ir=W_bus_1550,R_Couple=R_couple,gap_ir=0.4,gap_vis=gap_780[i],pulley_angle=30,colume_idx=i,total_colum=len(gap_780),extra_move=50)
+    mydev.movex( i * (detaX+50))
     mydev.movey(-i * detaY )
 D3.movey(-6000)
-DIE << D3
-marker = D<<sw.alignment_mark(layer=layer_ebeam_mark)
+DD << D3
+
+D33 = Device('Add_drop_coupler_2')
+for i, gap_vis in enumerate(gap_780):
+    mydev = D33 << single_device(w_bus_ir=2,R_Couple=50,gap_ir=gap_1550[i],gap_vis=gap_780[i],pulley_angle=30,colume_idx=i,total_colum=len(gap_780),extra_move=50,taper_key=True)
+    mydev.movex(i * (detaX+50))
+    mydev.movey(-i * detaY )
+D33.movey(-6000-3500)
+DD << D33
+bbox = DD.bbox
+DD.move(origin=DD.center,destination=(0,0))
+DIE <<DD
+marker =DIE << sw.alignment_mark_array(width=2,length=300,center_square=False,offset=[(-200,200),(-200,-200),(200,-200),(200,200)],coordinates=[(-15000,15000),(-15000,-15000),(15000,-15000), (15000,15000)],layer=layer_ring)
+marker =DIE << sw.alignment_mark_array(width=2,length=300,center_square=False,offset=[(-200,200),(-200,-200),(200,-200),(200,200)],coordinates=[(-15000,15000),(-15000,-15000),(15000,-15000), (15000,15000)],layer=layer_text)
+
 qp(DIE)
-DIE.write_gds(filename=name+'.gds',unit=1e-6, precision=1e-10)
+DIE.write_gds(filename=name+'.gds',unit=1e-6, precision=1e-9)
 
 
 
