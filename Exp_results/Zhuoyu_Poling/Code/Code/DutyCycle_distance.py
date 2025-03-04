@@ -26,7 +26,7 @@ from scipy.fftpack import fft, fftfreq
 
 
 # 定义数据文件的相对路径
-data_file = Path("..") / ".."/"20250225" / "Confocal" / "20250225-2216-01_confocal_xy_data.dat"
+data_file = Path("..") / ".."/"20250225" / "Confocal" / "20250225-2035-40_confocal_xy_data.dat"
 # 确保路径正确解析
 print(f"解析后的绝对路径: {data_file.resolve()}")
 
@@ -76,11 +76,12 @@ df['shg_intensity'] = shg_intensity  # 把平滑后的数据加入 DataFrame 里
 file_prefix = data_file.stem  # 获取输入数据文件名
 save_dir = Path("..") / ".." / "Processed_Figures"
 save_dir.mkdir(parents=True, exist_ok=True)  # 确保目录存在
-y_e = np.linspace(round(5*(len(df))/35),round(18*(len(df))/35),num=40)
+y_e = np.linspace(round(5*(len(df))/35),round(20*(len(df))/35),num=40)
 # **Step 1: 设定 y_e 的扫描范围**
 y_e_values = df["y position (m)"].iloc[y_e]
 duty_cycles = []  # 存储计算出的占空比
 valid_y_e = []  # 存储有效的 y_e
+width_std = []
 
 for y_e in y_e_values:
     # **Step 2: 提取 X 方向数据**
@@ -115,6 +116,7 @@ for y_e in y_e_values:
 
         # **Step 7: 只保留 1.4—2 μm 之间的间距**
         filtered_peak_distances = [d for d in all_peak_distances if 1.2 <= d <= 2.2]
+        width_std_cup = np.std(filtered_peak_distances)
 
         if len(filtered_peak_distances) > 0:
             avg_distance = np.mean(filtered_peak_distances)  # 计算筛选后的平均间距
@@ -126,6 +128,7 @@ for y_e in y_e_values:
     # **Step 8: 计算占空比**
     if avg_distance is not None and len(filtered_peak_distances) > 0:
         duty_cycle = np.median(filtered_peak_distances) / (2 * avg_distance)
+        width_std.append(width_std_cup)
         # **修正：添加数据到列表**
         duty_cycles.append(duty_cycle)  # 存储计算出的占空比
         valid_y_e.append(y_e)  # 存储有效的 y_e
@@ -133,17 +136,33 @@ for y_e in y_e_values:
     else:
         print("Error: Cannot compute duty cycle (no valid peak distances).")
 
-# **Step 8: 绘制占空比 vs. y_e**
-plt.figure(figsize=(10, 6))
-plt.plot(valid_y_e, duty_cycles, marker='o', linestyle='-', color='b', label="Duty Cycle")
-plt.xlabel("Y Position (μm)", fontsize=14)
-plt.ylabel("Duty Cycle", fontsize=14)
-plt.title("Duty Cycle vs. Distance from Electrode", fontsize=16)
-plt.legend()
-plt.grid(True)
+# 绘制 poling duty cycle 和标准差分布
+fig, ax1 = plt.subplots(figsize=(10, 6))
+# Duty Cycle 曲线
+color1 = 'tab:blue'
+ax1.set_xlabel("Y Position (μm)", fontsize=14)
+ax1.set_ylabel("Duty Cycle", color=color1, fontsize=14)
+ax1.plot(valid_y_e, duty_cycles, marker='o', linestyle='-', color=color1, label="Duty Cycle")
+ax1.tick_params(axis='y', labelcolor=color1)
+ax1.set_ylim(0, 1.1)  # 限制 duty cycle 在 0 到 1 之间
 
-# **保存图片**
-plt.savefig(save_dir / f"{file_prefix}_DutyCycle_vs_Y.png", dpi=600, transparent=True, bbox_inches='tight')
+
+
+# 添加次坐标轴表示标准差
+ax2 = ax1.twinx()
+color2 = 'tab:red'
+ax2.set_ylabel("Standard Deviation of Peak Distance", color=color2, fontsize=14)
+ax2.plot(valid_y_e, width_std, marker='s', linestyle='--', color=color2, label="STD Width")
+ax2.tick_params(axis='y', labelcolor=color2)
+
+# 标题 & 图例
+fig.suptitle("Poling Duty Cycle and Standard Deviation Distribution", fontsize=16)
+fig.legend(loc="upper left", bbox_to_anchor=(0.1, 0.9))
+fig.tight_layout()
+
+# 保存图片
+plot_filename = f"{file_prefix}_DutyCycle_vs_Y.png"
+plt.savefig(save_dir / plot_filename, dpi=600, transparent=True, bbox_inches='tight')
 plt.show()
 
-print(f"📊 Duty Cycle vs. Y plot saved as {file_prefix}_DutyCycle_vs_Y.png")
+print(f"📊 Plot saved as {plot_filename}")

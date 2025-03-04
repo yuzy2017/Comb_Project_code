@@ -11,7 +11,7 @@ import scipy.interpolate
 row = np.arange(0, 18, 1)
 
 # **Step 1: 设置实验数据目录**
-date = "20250226"  # 需要处理的日期
+date = "20250304"  # 需要处理的日期
 data_dir = Path("..") / ".." / date / "Confocal"  # 数据目录
 save_dir = Path("..") / ".." / "Processed_Figures" / date  # 结果保存路径
 save_dir.mkdir(parents=True, exist_ok=True)  # 确保目录存在
@@ -49,8 +49,8 @@ with open(log_file_path, "w", encoding="utf-8") as log_file:
         data['#x position (m)'] = (data['#x position (m)'] - data['#x position (m)'].min()) * 1e6 * 0.606
         data['y position (m)'] = ((data['y position (m)'] - data['y position (m)'].min()) * 1e6) * 0.368
         #for rings
-        data.drop((data[data['#x position (m)'] < 40].index), inplace=True)
-        data.drop((data[data['#x position (m)'] >60].index), inplace=True)
+        data.drop((data[data['#x position (m)'] < 20].index), inplace=True)
+        data.drop((data[data['#x position (m)'] >50].index), inplace=True)
         #data.drop((data[data['#x position (m)'] < 30].index), inplace=True)
 
         # 提取 X、Y、Z 数据
@@ -80,7 +80,7 @@ with open(log_file_path, "w", encoding="utf-8") as log_file:
         # define the line for electrode refe
         #
         # rence
-        y_e = round(20 * (len(data)) / 35)
+        y_e = round(15 * (len(data)) / 35)
         # **Step 1: 提取 X 方向数据**
         X_e, Z_e = [], []
         if y_e >= len(data):
@@ -97,6 +97,33 @@ with open(log_file_path, "w", encoding="utf-8") as log_file:
 
         x_e = np.asarray(X_e)
         z_e = np.asarray(Z_e)
+        vmin = data['shg_intensity'].min()
+        # vmax = df['count rate /Dev2/Ctr3 (Hz)'].max()
+        vmax = 0.98
+
+        fig=plt.figure(figsize=(6,9))
+        # plot the data
+        plt.scatter(x=data['#x position (m)'], y=data['y position (m)']
+                    , c=data['shg_intensity'], cmap='magma', vmin=vmin, vmax=vmax)
+        plt.axhline(y=data['y position (m)'].iloc[y_e], color='black', linestyle='-.', linewidth=5)
+        plt.axhline(y=data['y position (m)'].iloc[round(4 * (len(data)) / 16)], color='r', linestyle='-.', linewidth=5)
+        # plt.ylim(0,22)
+        # plt.axis('off')
+        plt.xlabel('X position ($\mu$m)', size=24)
+        plt.ylabel('Y position ($\mu$m)', size=24)
+        plt.tick_params(axis='both', labelsize=24)
+        cbar = plt.colorbar()
+        ticklabs = cbar.ax.get_yticklabels()
+        cbar.ax.set_yticklabels(ticklabs, fontsize=20)
+        # cbar.ax.set_title('SHG intensity (counts/sec)',fontsize=20,rotation = 90)
+        plt.tick_params(axis='both', labelsize=24)
+        file_prefix = data_file.stem  # 提取数据文件名
+        fig.savefig(save_dir / f"{file_prefix}_Sample_position.png", dpi=600, transparent=True, bbox_inches='tight')
+        plt.close(fig)
+
+
+
+
 
         # 确保数据非空
         if len(x_e) == 0 or len(z_e) == 0:
@@ -107,7 +134,7 @@ with open(log_file_path, "w", encoding="utf-8") as log_file:
 
         # **Step 3.4: 计算 FFT**
         N = len(x_e)
-        fft_y = fft(z_e_smooth - np.mean(z_e_smooth))
+        fft_y = fft(z_e - np.mean(z_e))
         freqs = fftfreq(N, d=(x_e[1] - x_e[0]))
         fft_amplitude = 2 / N * np.abs(fft_y)
 
@@ -189,13 +216,11 @@ with open(log_file_path, "w", encoding="utf-8") as log_file:
         if T>2:
             T = T/2
             flip=0
-        if T > 30:
-            log_print(f"⚠️ {data_file.name}: 计算得到的 Poling 周期过大 (2T={2*T:.2f} μm)，跳过文件")
-            continue
+
 
         # **Step 3.4: 计算占空比**
-        min_peak_distance = 0.9/ (x_e[1] - x_e[0])
-        peaks, _ = find_peaks(-z_e_smooth, distance=min_peak_distance,prominence=0.05)
+        min_peak_distance = 0.5/ (x_e[1] - x_e[0])
+        peaks, _ = find_peaks(1-z_e, distance=min_peak_distance,height=np.percentile(abs(1-z_e),50))
         # 检查是否找到峰值
         if len(peaks) < 2:
             print("Warning: No peaks found! Please check your input parameters or data.")
@@ -209,12 +234,36 @@ with open(log_file_path, "w", encoding="utf-8") as log_file:
             log_print(f"⚠️ {data_file.name} 处理完成: Poling Period 2T={2*T:.2f} μm, 但无法计算 Duty Cycle")
 
         # **Step 2: 让反转起点与 dark_peaks[0] 对齐**
-        x_shifted = x_e - x_e[peaks[0]]  # **平移 x 轴，使第一个 peak 对齐 0**
+        idx = np.argmin(z_e)
+        x_shifted = x_e - x_e[idx]  # **平移 x 轴，使第一个 peak 对齐 0**
 
         # **Step 3: 计算 d_eff 反转**
         if flip:
             deff_signs = np.sign(np.sin(2 * np.pi / (2 * T) * x_shifted))  # 生成正弦反转信号
             z_e_reversed = z_e * deff_signs  # 反转 d_eff
+            flip_regions = deff_signs < 0  # 负值区域
+            # 绘制图像
+            fig = plt.figure(figsize=(10, 5))
+            plt.plot(x_e, z_e, label="Original $z_e$", linestyle='-', color='b')
+            plt.plot(x_e, z_e_reversed, label="Reversed $z_e$", linestyle='--', color='r')
+
+            # 颜色填充不同区域
+            plt.fill_between(x_e, z_e.min(), z_e.max(), where=flip_regions, color='red', alpha=0.2,
+                             label="Flipped Region")
+            plt.fill_between(x_e, z_e.min(), z_e.max(), where=~flip_regions, color='blue', alpha=0.2,
+                             label="Unflipped Region")
+
+            # 图例和标签
+            plt.xlabel("x")
+            plt.ylabel("z_e values")
+            plt.title("Comparison of $z_e$ and Reversed $z_e$")
+            plt.legend()
+            plt.grid(True)
+            # **自动保存图片**
+            fig.savefig(save_dir / f"{data_file.stem}_inverse_region.png",
+                        dpi=600, transparent=True, bbox_inches='tight')
+            plt.close(fig)
+
         else:
             z_e_reversed = z_e
 
@@ -235,7 +284,7 @@ with open(log_file_path, "w", encoding="utf-8") as log_file:
         target_amplitude = fft_amplitude_qpm[target_idx]  # 目标频率的 FFT 幅度
 
         if np.abs(qpm_peak_freq - target_freq) > 0.05:  # 允许 ±0.1/μm 误差
-            log_print(f"⚠️ QPM Peak ({qpm_peak_freq:.4f} 1/μm) not near 0.28/μm, using 0.28/μm value.")
+            log_print(f"⚠️ QPM Peak ({qpm_peak_freq:.4f} 1/μm) not near 0.298/μm, using 0.298/μm value.")
             qpm_peak_freq = target_freq
             qpm_peak_amplitude = target_amplitude
 
